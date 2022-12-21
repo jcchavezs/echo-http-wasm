@@ -3,7 +3,6 @@ package httpwasm
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/textproto"
@@ -35,15 +34,6 @@ func (s *requestState) enableFeatures(features handlerapi.Features) {
 }
 
 func (s *requestState) handleNext() (err error) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			if e, ok := recovered.(error); ok {
-				err = e
-			} else {
-				err = fmt.Errorf("%v", recovered)
-			}
-		}
-	}()
 	return s.next(s.c)
 }
 
@@ -230,8 +220,11 @@ func (host) RemoveRequestTrailer(ctx context.Context, name string) {
 
 // GetStatusCode implements the same method as documented on handler.Host.
 func (host) GetStatusCode(ctx context.Context) uint32 {
-	s := requestStateFromContext(ctx)
-	return uint32(s.c.Response().Status)
+	r := requestStateFromContext(ctx).c.Response()
+	if r.Status == 0 {
+		return 200
+	}
+	return uint32(r.Status)
 }
 
 // SetStatusCode implements the same method as documented on handler.Host.
